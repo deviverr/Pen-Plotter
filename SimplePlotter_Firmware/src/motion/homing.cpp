@@ -183,6 +183,14 @@ bool Homing::_singleAxisHomingSequence(char axis, long max_travel_steps, float f
         return false;
     }
     
+    // Allow debounce to settle after backoff move completes
+    delay(50);
+    // Force multiple reads to flush stale debounce state
+    for (int i = 0; i < 5; i++) {
+        endstops.isTriggered(axis);
+        delay(10);
+    }
+
     // Post-backoff validation: Ensure endstop is no longer triggered
     if (endstops.isTriggered(axis)) {
         serialHandler.sendError(ERR_HOMING_FAILED, "Endstop still triggered after backoff");
@@ -336,7 +344,7 @@ bool Homing::_moveAwayFromEndstop(char axis, float distance_mm, float speed_mm_s
 
     // Block until movement is complete (or timeout)
     // Calculate an approximate timeout based on distance and speed
-    unsigned long timeout_calc_ms = (unsigned long)(distance_mm / speed_mm_s * 1500UL) + 500UL; // 1.5x expected time + buffer
+    unsigned long timeout_calc_ms = (unsigned long)(distance_mm / speed_mm_s * 4000UL) + 2000UL; // 4x expected time + buffer (accel ramps need headroom)
     unsigned long start_time = millis();
     unsigned long last_ui_update_backoff = 0;
     while (stepperControl.isAxisRunning(axis)) {

@@ -91,6 +91,34 @@ dotnet build
 dotnet run --project PlotterControl
 ```
 
+### Serial Protocol
+
+The firmware communicates over USB serial at **115200 baud** using a line-based protocol. Every command receives a response.
+
+**Response format:**
+- `ok` — Command accepted and executed
+- `error:<code> <description>` — Command failed
+- `// <message>` — Informational message (diagnostics, status updates)
+
+**Error codes:**
+
+| Code | Name | Description |
+|------|------|-------------|
+| 1 | Unknown Command | Unrecognized G-code or M-code |
+| 2 | Invalid Syntax | Malformed G-code (missing parameters, bad format) |
+| 3 | Out of Range | Target position exceeds soft limits or maximum allowed jump |
+| 4 | Endstop Hit | Endstop triggered during a move (safety stop) |
+| 5 | Homing Failed | Homing sequence failed — endstop not found, backoff failed, or timeout |
+| 6 | Not Homed | Attempted absolute move (G90) without homing first — send G28 |
+| 7 | Buffer Overflow | G-code command buffer full or line exceeds 64 characters |
+| 8 | Timeout | General operation timeout |
+| 9 | Empty Command | Empty or whitespace-only line received |
+
+**Position report format** (M114 response):
+```
+X:123.45 Y:67.89 Z:2.00
+```
+
 ---
 
 ## Hardware
