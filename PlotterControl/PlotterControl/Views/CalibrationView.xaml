@@ -69,14 +69,120 @@
                 </materialDesign:Card>
             </StackPanel>
 
-            <!-- Right Column: Quick Navigation -->
+            <!-- Right Column: Controls -->
             <StackPanel Grid.Column="2">
-                <materialDesign:Card Padding="16" Margin="0,0,0,8">
+                <!-- Position Display -->
+                <materialDesign:Card Padding="12" Margin="0,0,0,8">
                     <StackPanel>
-                        <TextBlock Text="Quick Navigation" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <TextBlock Text="Position" FontWeight="Bold" Margin="0,0,0,6"/>
+                        <StackPanel Orientation="Horizontal">
+                            <materialDesign:PackIcon Kind="AxisXArrow" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock Text="{Binding CurrentX, StringFormat='X: {0:F2} mm'}" Margin="0,0,20,0" FontSize="16" FontFamily="Consolas"/>
+                            <materialDesign:PackIcon Kind="AxisYArrow" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock Text="{Binding CurrentY, StringFormat='Y: {0:F2} mm'}" Margin="0,0,20,0" FontSize="16" FontFamily="Consolas"/>
+                            <materialDesign:PackIcon Kind="AxisZArrow" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock Text="{Binding CurrentZ, StringFormat='Z: {0:F2} mm'}" FontSize="16" FontFamily="Consolas"/>
+                        </StackPanel>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Jog Controls -->
+                <materialDesign:Card Padding="12" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="Jog Controls" FontWeight="Bold" Margin="0,0,0,6"/>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Button Grid.Row="0" Grid.Column="1" Command="{Binding JogYPlusCommand}" Margin="2" Height="40"
+                                    Style="{StaticResource MaterialDesignRaisedButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="ArrowUp"/>
+                                    <TextBlock Text=" Y+" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Row="1" Grid.Column="0" Command="{Binding JogXMinusCommand}" Margin="2" Height="40"
+                                    Style="{StaticResource MaterialDesignRaisedButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="ArrowLeft"/>
+                                    <TextBlock Text=" X-" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Row="1" Grid.Column="1" Command="{Binding HomeAllCommand}" Margin="2" Height="40"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}" ToolTip="Home All (G28)">
+                                <materialDesign:PackIcon Kind="Home"/>
+                            </Button>
+                            <Button Grid.Row="1" Grid.Column="2" Command="{Binding JogXPlusCommand}" Margin="2" Height="40"
+                                    Style="{StaticResource MaterialDesignRaisedButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="X+ " VerticalAlignment="Center"/>
+                                    <materialDesign:PackIcon Kind="ArrowRight"/>
+                                </StackPanel>
+                            </Button>
+                            <Button Grid.Row="2" Grid.Column="1" Command="{Binding JogYMinusCommand}" Margin="2" Height="40"
+                                    Style="{StaticResource MaterialDesignRaisedButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <materialDesign:PackIcon Kind="ArrowDown"/>
+                                    <TextBlock Text=" Y-" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+
+                            <StackPanel Grid.Row="0" Grid.Column="3" Grid.RowSpan="3" Margin="10,0,0,0">
+                                <Button Command="{Binding JogZPlusCommand}" Margin="2" Height="40" Width="60"
+                                        Style="{StaticResource MaterialDesignRaisedButton}" Content="Z+"/>
+                                <Button Command="{Binding JogZMinusCommand}" Margin="2" Height="40" Width="60"
+                                        Style="{StaticResource MaterialDesignRaisedButton}" Content="Z-"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Step Size & Pen -->
+                <materialDesign:Card Padding="12" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="Step Size &amp; Pen" FontWeight="Bold" Margin="0,0,0,6"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Step:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                            <ComboBox ItemsSource="{Binding JogSteps}" SelectedItem="{Binding JogStep}" Width="80" Margin="0,0,16,0"
+                                      Style="{StaticResource MaterialDesignFilledComboBox}"/>
+                            <Button Command="{Binding PenUpCommand}" Content="Pen Up" Margin="0,0,5,0"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                            <Button Command="{Binding PenDownCommand}" Content="Pen Down"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Pen Height Calibration -->
+                <materialDesign:Card Padding="12" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="Pen Height Calibration" FontWeight="Bold" Margin="0,0,0,6"/>
+                        <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12" Margin="0,0,0,8"
+                                   Text="Jog Z until pen touches paper, then click 'Set Pen Down Position'."/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                            <TextBlock Text="{Binding DisplayPenDownZ, StringFormat='Down: {0:F2} mm'}" FontSize="14" FontFamily="Consolas" Margin="0,0,24,0"/>
+                            <TextBlock Text="{Binding DisplayPenUpZ, StringFormat='Up: {0:F2} mm'}" FontSize="14" FontFamily="Consolas"/>
+                        </StackPanel>
+                        <Button Command="{Binding SetPenDownPositionCommand}" Content="Set Pen Down Position"
+                                Style="{StaticResource MaterialDesignRaisedButton}"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Quick Navigation -->
+                <materialDesign:Card Padding="12" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="Quick Navigation" FontWeight="Bold" Margin="0,0,0,6"/>
                         <TextBlock Text="Move pen to calibrated area corners (pen up)." Opacity="0.7" FontSize="12" Margin="0,0,0,8"/>
 
-                        <!-- Corner button grid layout -->
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
@@ -89,7 +195,6 @@
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
-                            <!-- Top row: TL, _, TR -->
                             <Button Grid.Row="0" Grid.Column="0" Command="{Binding GoToTopLeftCommand}"
                                     Content="TL" Margin="2" Height="40"
                                     Style="{StaticResource MaterialDesignOutlinedButton}"
@@ -99,13 +204,11 @@
                                     Style="{StaticResource MaterialDesignOutlinedButton}"
                                     ToolTip="Move to top-right corner"/>
 
-                            <!-- Middle row: _, Center, _ -->
                             <Button Grid.Row="1" Grid.Column="1" Command="{Binding GoToCenterCommand}"
                                     Content="Center" Margin="2" Height="40"
                                     Style="{StaticResource MaterialDesignOutlinedButton}"
                                     ToolTip="Move to center of calibrated area"/>
 
-                            <!-- Bottom row: BL, _, BR -->
                             <Button Grid.Row="2" Grid.Column="0" Command="{Binding GoToBottomLeftCommand}"
                                     Content="BL" Margin="2" Height="40"
                                     Style="{StaticResource MaterialDesignOutlinedButton}"

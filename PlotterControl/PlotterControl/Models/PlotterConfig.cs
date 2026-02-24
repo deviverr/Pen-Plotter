@@ -13,9 +13,10 @@ namespace PlotterControl.Models
         public double CalibrationWidth { get; set; } = 200.0; // User-defined printable width
         public double CalibrationHeight { get; set; } = 200.0; // User-defined printable height
 
-        // Pen/Z-Axis Settings
-        public double PenUpZ { get; set; } = 0.0;    // Z-height for pen up (off paper)
-        public double PenDownZ { get; set; } = 15.0; // Z-height for pen down (on paper)
+        // Pen/Z-Axis Settings (Z=0 is at endstop/paper level, Z+ moves up)
+        public double PenUpZ { get; set; } = 3.0;    // Z-height for pen up (raised above paper)
+        public double PenDownZ { get; set; } = 0.5;  // Z-height for pen down (paper contact)
+        public double PenLiftHeight { get; set; } = 2.5; // Distance pen lifts above PenDownZ
 
         // Movement Speeds (mm/min)
         public double RapidFeedrate { get; set; } = 5000.0; // G0/rapid movement

@@ -17,6 +17,7 @@ namespace PlotterControl.Services
     public class PlotterService : IPlotterService
     {
         private readonly SerialConnection _serialConnection;
+        private readonly ConfigManager _configManager;
         private MachineState _machineState; // Backing field for MachineState property
         private CancellationTokenSource _readLoopCancellationTokenSource;
         private Task _readLoopTask;
@@ -40,9 +41,10 @@ namespace PlotterControl.Services
         private const int HOMING_TIMEOUT_MS = 120000;   // 2 minutes for full G28 (all 3 axes)
         private const double DEFAULT_Z_FEEDRATE_MM_MIN = 600; // From firmware config.h: MAX_VELOCITY_Z * 60
 
-        public PlotterService(SerialConnection serialConnection)
+        public PlotterService(SerialConnection serialConnection, ConfigManager configManager)
         {
             _serialConnection = serialConnection ?? throw new ArgumentNullException(nameof(serialConnection));
+            _configManager = configManager ?? throw new ArgumentNullException(nameof(configManager));
             _serialConnection.DataReceived += HandleSerialDataReceived;
             _serialConnection.ErrorOccurred += HandleSerialErrorOccurred;
             _serialConnection.ConnectionClosed += HandleConnectionClosed;
@@ -316,8 +318,8 @@ namespace PlotterControl.Services
             UpdateMachineState(ms => ms.IsBusy = true);
             try
             {
-                // GCodeGenerator config in Work_Plan expects PEN_UP_Z to be 0.0
-                bool success = await SendGCodeAndAwaitOkAsync($"G0 Z{0.0:F3} F{DEFAULT_Z_FEEDRATE_MM_MIN}");
+                double penUpZ = _configManager.CurrentConfig.PenUpZ;
+                bool success = await SendGCodeAndAwaitOkAsync($"G0 Z{penUpZ:F3} F{DEFAULT_Z_FEEDRATE_MM_MIN}");
                 return success;
             }
             finally
@@ -331,8 +333,8 @@ namespace PlotterControl.Services
             UpdateMachineState(ms => ms.IsBusy = true);
             try
             {
-                // GCodeGenerator config in Work_Plan expects PEN_DOWN_Z to be 15.0
-                bool success = await SendGCodeAndAwaitOkAsync($"G0 Z{15.0:F3} F{DEFAULT_Z_FEEDRATE_MM_MIN}");
+                double penDownZ = _configManager.CurrentConfig.PenDownZ;
+                bool success = await SendGCodeAndAwaitOkAsync($"G0 Z{penDownZ:F3} F{DEFAULT_Z_FEEDRATE_MM_MIN}");
                 return success;
             }
             finally
@@ -780,7 +782,8 @@ namespace PlotterControl.Services
             Task.Run(async () =>
             {
                 await SendGCodeAsync("M410"); // Quickstop
-                await SendGCodeAsync($"G0 Z{0.0:F3} F{DEFAULT_Z_FEEDRATE_MM_MIN}"); // Pen up
+                double penUpZ = _configManager.CurrentConfig.PenUpZ;
+                await SendGCodeAsync($"G0 Z{penUpZ:F3} F{DEFAULT_Z_FEEDRATE_MM_MIN}"); // Pen up
             });
             
             _isPlottingPaused = false;

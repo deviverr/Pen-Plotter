@@ -95,9 +95,9 @@
 // AccelStepper handles this internally, but conceptually for software limits
 #define JUNCTION_DEVIATION_MM 0.05 // Equivalent to Marlin's DEFAULT_JERK in AccelStepper context
 
-// Pen Z positions (in mm, relative to Z=0 being fully up)
-#define PEN_UP_Z        0.0     // Z position when pen is fully up
-#define PEN_DOWN_Z      15.0    // Z position when pen is in drawing contact
+// Pen Z positions (Z=0 is at endstop/paper level, Z+ moves up)
+#define PEN_UP_Z        3.0     // Z position when pen is raised (above paper)
+#define PEN_DOWN_Z      0.5     // Z position when pen contacts paper
 
 // Homing Parameters
 #define HOMING_FEEDRATE_FAST    20.0  // mm/s for fast approach (gentle to avoid missed steps)

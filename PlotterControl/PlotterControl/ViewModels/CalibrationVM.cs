@@ -2,7 +2,9 @@
 
 using PlotterControl.Models;
 using PlotterControl.Services;
+using PlotterControl.Utils;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -14,6 +16,14 @@ namespace PlotterControl.ViewModels
         private readonly ConfigManager _configManager;
         private PlotterConfig _currentConfig;
 
+        // --- Machine state properties (bound to UI) ---
+        public bool IsConnected => _plotterService.MachineState.IsConnected;
+        public bool IsBusy => _plotterService.MachineState.IsBusy;
+        public double CurrentX => _plotterService.MachineState.CurrentX;
+        public double CurrentY => _plotterService.MachineState.CurrentY;
+        public double CurrentZ => _plotterService.MachineState.CurrentZ;
+
+        // --- Calibration points ---
         private PlotterPoint _point1;
         public PlotterPoint Point1
         {
@@ -59,21 +69,45 @@ namespace PlotterControl.ViewModels
             {
                 if (SetProperty(ref _isCalibrating, value))
                 {
-                    ((AsyncRelayCommand)StartCalibrationCommand).RaiseCanExecuteChanged();
-                    ((AsyncRelayCommand)SetPoint1Command).RaiseCanExecuteChanged();
-                    ((AsyncRelayCommand)SetPoint2Command).RaiseCanExecuteChanged();
-                    ((AsyncRelayCommand)SaveCalibrationCommand).RaiseCanExecuteChanged();
+                    RaiseAllCanExecuteChanged();
                 }
             }
         }
 
-        // Commands
+        // --- Jog properties ---
+        private double _jogStep;
+        public double JogStep
+        {
+            get => _jogStep;
+            set => SetProperty(ref _jogStep, value);
+        }
+
+        public List<double> JogSteps { get; } = new List<double> { 0.1, 1, 10, 50 };
+
+        // --- Pen height calibration properties ---
+        public double DisplayPenDownZ => _configManager.CurrentConfig.PenDownZ;
+        public double DisplayPenUpZ => _configManager.CurrentConfig.PenUpZ;
+
+        // --- Commands: Calibration workflow ---
         public ICommand StartCalibrationCommand { get; }
         public ICommand SetPoint1Command { get; }
         public ICommand SetPoint2Command { get; }
         public ICommand SaveCalibrationCommand { get; }
 
-        // Corner navigation commands
+        // --- Commands: Jog ---
+        public ICommand JogXPlusCommand { get; }
+        public ICommand JogXMinusCommand { get; }
+        public ICommand JogYPlusCommand { get; }
+        public ICommand JogYMinusCommand { get; }
+        public ICommand JogZPlusCommand { get; }
+        public ICommand JogZMinusCommand { get; }
+
+        // --- Commands: Pen & Home ---
+        public ICommand PenUpCommand { get; }
+        public ICommand PenDownCommand { get; }
+        public ICommand HomeAllCommand { get; }
+
+        // --- Commands: Corner navigation ---
         public ICommand GoToOriginCommand { get; }
         public ICommand GoToBottomLeftCommand { get; }
         public ICommand GoToBottomRightCommand { get; }
@@ -82,12 +116,17 @@ namespace PlotterControl.ViewModels
         public ICommand GoToCenterCommand { get; }
         public ICommand TracePerimeterCommand { get; }
 
+        // --- Commands: Pen Z calibration ---
+        public ICommand SetPenDownPositionCommand { get; }
+
         public CalibrationVM(IPlotterService plotterService, ConfigManager configManager)
         {
             _plotterService = plotterService;
             _configManager = configManager;
-
             _currentConfig = _configManager.CurrentConfig;
+
+            // Subscribe to machine state changes (fixes gray buttons)
+            _plotterService.MachineStateChanged += OnMachineStateChanged;
 
             // Initialize properties from config
             Point1 = _currentConfig.CalibrationOrigin;
@@ -96,27 +135,147 @@ namespace PlotterControl.ViewModels
             CalibrationWidth = _currentConfig.CalibrationWidth;
             CalibrationHeight = _currentConfig.CalibrationHeight;
 
+            // Jog defaults
+            JogStep = JogSteps[1]; // 1mm
+
             // Calibration workflow commands
             StartCalibrationCommand = new AsyncRelayCommand(StartCalibration, CanStartCalibration);
             SetPoint1Command = new AsyncRelayCommand(SetPoint1, CanSetPoint1);
             SetPoint2Command = new AsyncRelayCommand(SetPoint2, CanSetPoint2);
             SaveCalibrationCommand = new AsyncRelayCommand(SaveCalibration, CanSaveCalibration);
 
+            // Jog commands
+            JogXPlusCommand = new AsyncRelayCommand(() => JogAxis('X', JogStep), CanJog);
+            JogXMinusCommand = new AsyncRelayCommand(() => JogAxis('X', -JogStep), CanJog);
+            JogYPlusCommand = new AsyncRelayCommand(() => JogAxis('Y', JogStep), CanJog);
+            JogYMinusCommand = new AsyncRelayCommand(() => JogAxis('Y', -JogStep), CanJog);
+            JogZPlusCommand = new AsyncRelayCommand(() => JogAxis('Z', JogStep), CanJog);
+            JogZMinusCommand = new AsyncRelayCommand(() => JogAxis('Z', -JogStep), CanJog);
+
+            // Pen & home commands
+            PenUpCommand = new AsyncRelayCommand(PenUp, CanJog);
+            PenDownCommand = new AsyncRelayCommand(PenDown, CanJog);
+            HomeAllCommand = new AsyncRelayCommand(HomeAllAxes, CanJog);
+
             // Corner navigation commands
-            GoToOriginCommand = new AsyncRelayCommand(GoToOrigin, CanNavigate);
-            GoToBottomLeftCommand = new AsyncRelayCommand(GoToBottomLeft, CanNavigate);
-            GoToBottomRightCommand = new AsyncRelayCommand(GoToBottomRight, CanNavigate);
-            GoToTopLeftCommand = new AsyncRelayCommand(GoToTopLeft, CanNavigate);
-            GoToTopRightCommand = new AsyncRelayCommand(GoToTopRight, CanNavigate);
-            GoToCenterCommand = new AsyncRelayCommand(GoToCenter, CanNavigate);
-            TracePerimeterCommand = new AsyncRelayCommand(TracePerimeter, CanNavigate);
+            GoToOriginCommand = new AsyncRelayCommand(GoToOrigin, CanJog);
+            GoToBottomLeftCommand = new AsyncRelayCommand(GoToBottomLeft, CanJog);
+            GoToBottomRightCommand = new AsyncRelayCommand(GoToBottomRight, CanJog);
+            GoToTopLeftCommand = new AsyncRelayCommand(GoToTopLeft, CanJog);
+            GoToTopRightCommand = new AsyncRelayCommand(GoToTopRight, CanJog);
+            GoToCenterCommand = new AsyncRelayCommand(GoToCenter, CanJog);
+            TracePerimeterCommand = new AsyncRelayCommand(TracePerimeter, CanJog);
+
+            // Pen Z calibration
+            SetPenDownPositionCommand = new AsyncRelayCommand(SetPenDownPosition, CanJog);
 
             StatusMessage = "Load existing calibration or start new.";
         }
 
+        // --- Machine state subscription ---
+
+        private void OnMachineStateChanged(MachineState newState)
+        {
+            OnPropertyChanged(nameof(IsConnected));
+            OnPropertyChanged(nameof(IsBusy));
+            OnPropertyChanged(nameof(CurrentX));
+            OnPropertyChanged(nameof(CurrentY));
+            OnPropertyChanged(nameof(CurrentZ));
+
+            RaiseAllCanExecuteChanged();
+        }
+
+        private void RaiseAllCanExecuteChanged()
+        {
+            ((AsyncRelayCommand)StartCalibrationCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)SetPoint1Command).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)SetPoint2Command).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)SaveCalibrationCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)JogXPlusCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)JogXMinusCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)JogYPlusCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)JogYMinusCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)JogZPlusCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)JogZMinusCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)PenUpCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)PenDownCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)HomeAllCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)GoToOriginCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)GoToBottomLeftCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)GoToBottomRightCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)GoToTopLeftCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)GoToTopRightCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)GoToCenterCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)TracePerimeterCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)SetPenDownPositionCommand).RaiseCanExecuteChanged();
+        }
+
+        // --- CanExecute predicates ---
+
+        private bool CanJog() => IsConnected && !IsBusy;
+        private bool CanStartCalibration() => IsConnected && !IsBusy && !IsCalibrating;
+        private bool CanSetPoint1() => IsCalibrating && IsConnected && !IsBusy;
+        private bool CanSetPoint2() => IsCalibrating && IsConnected && !IsBusy && _point1Captured;
+        private bool CanSaveCalibration() => IsCalibrating && IsConnected && CalibrationWidth > 0 && CalibrationHeight > 0;
+
+        // --- Jog implementation ---
+
+        private async Task JogAxis(char axis, double distance)
+        {
+            if (!IsConnected || IsBusy) return;
+            double jogFeedrate = (axis == 'Z') ? 600 : 5000;
+            bool success = await _plotterService.JogAsync(axis, distance, jogFeedrate);
+            if (success) await _plotterService.GetMachineStateAsync();
+        }
+
+        private async Task PenUp()
+        {
+            if (!IsConnected || IsBusy) return;
+            bool success = await _plotterService.PenUpAsync();
+            if (success) await _plotterService.GetMachineStateAsync();
+        }
+
+        private async Task PenDown()
+        {
+            if (!IsConnected || IsBusy) return;
+            bool success = await _plotterService.PenDownAsync();
+            if (success) await _plotterService.GetMachineStateAsync();
+        }
+
+        private async Task HomeAllAxes()
+        {
+            if (!IsConnected || IsBusy) return;
+            StatusMessage = "Homing all axes...";
+            bool success = await _plotterService.HomeAllAxesAsync();
+            StatusMessage = success ? "Homing complete." : "Homing failed.";
+            if (success) await _plotterService.GetMachineStateAsync();
+        }
+
+        // --- Pen Z calibration ---
+
+        private async Task SetPenDownPosition()
+        {
+            if (!IsConnected || IsBusy) return;
+
+            // Get fresh position
+            var state = await _plotterService.GetMachineStateAsync();
+            if (state == null) return;
+
+            double currentZ = state.CurrentZ;
+            double liftHeight = _configManager.CurrentConfig.PenLiftHeight;
+
+            _configManager.CurrentConfig.PenDownZ = currentZ;
+            _configManager.CurrentConfig.PenUpZ = currentZ + liftHeight;
+            _configManager.Save();
+
+            OnPropertyChanged(nameof(DisplayPenDownZ));
+            OnPropertyChanged(nameof(DisplayPenUpZ));
+
+            StatusMessage = $"Pen down set to Z={currentZ:F2}mm, pen up to Z={currentZ + liftHeight:F2}mm. Saved.";
+        }
+
         // --- Calibration workflow ---
 
-        private bool CanStartCalibration() => _plotterService.MachineState.IsConnected && !_plotterService.MachineState.IsBusy && !IsCalibrating;
         private Task StartCalibration()
         {
             IsCalibrating = true;
@@ -130,7 +289,6 @@ namespace PlotterControl.ViewModels
             return Task.CompletedTask;
         }
 
-        private bool CanSetPoint1() => IsCalibrating && _plotterService.MachineState.IsConnected && !_plotterService.MachineState.IsBusy;
         private async Task SetPoint1()
         {
             var state = await _plotterService.GetMachineStateAsync();
@@ -143,7 +301,6 @@ namespace PlotterControl.ViewModels
             }
         }
 
-        private bool CanSetPoint2() => IsCalibrating && _plotterService.MachineState.IsConnected && !_plotterService.MachineState.IsBusy && _point1Captured;
         private async Task SetPoint2()
         {
             var state = await _plotterService.GetMachineStateAsync();
@@ -167,7 +324,6 @@ namespace PlotterControl.ViewModels
             }
         }
 
-        private bool CanSaveCalibration() => IsCalibrating && _plotterService.MachineState.IsConnected && CalibrationWidth > 0 && CalibrationHeight > 0;
         private Task SaveCalibration()
         {
             _currentConfig.CalibrationOrigin = Point1;
@@ -182,16 +338,13 @@ namespace PlotterControl.ViewModels
 
         // --- Corner navigation ---
 
-        private bool CanNavigate() => _plotterService.MachineState.IsConnected && !_plotterService.MachineState.IsBusy;
-
         private async Task MoveToAbsolute(double x, double y, string label)
         {
             StatusMessage = $"Moving to {label}...";
-            // Pen up first, then move XY, all absolute
             await _plotterService.PenUpAsync();
             double feedrate = _currentConfig.RapidFeedrate;
-            await _plotterService.SendGCodeAsync($"G90");
-            await _plotterService.SendGCodeAsync($"G0 X{x:F3} Y{y:F3} F{feedrate:F0}");
+            await _plotterService.SendGCodeAndAwaitOkAsync($"G90");
+            await _plotterService.SendGCodeAndAwaitOkAsync($"G0 X{x:F3} Y{y:F3} F{feedrate:F0}");
             StatusMessage = $"At {label} ({x:F1}, {y:F1})";
         }
 
@@ -242,17 +395,13 @@ namespace PlotterControl.ViewModels
             double feed = _currentConfig.DrawFeedrate;
 
             await _plotterService.PenUpAsync();
-            await _plotterService.SendGCodeAsync("G90");
-            // Move to bottom-left
-            await _plotterService.SendGCodeAsync($"G0 X{ox:F3} Y{oy:F3} F{_currentConfig.RapidFeedrate:F0}");
-            // Pen down
+            await _plotterService.SendGCodeAndAwaitOkAsync("G90");
+            await _plotterService.SendGCodeAndAwaitOkAsync($"G0 X{ox:F3} Y{oy:F3} F{_currentConfig.RapidFeedrate:F0}");
             await _plotterService.PenDownAsync();
-            // Trace rectangle: BL -> BR -> TR -> TL -> BL
-            await _plotterService.SendGCodeAsync($"G1 X{(ox + w):F3} Y{oy:F3} F{feed:F0}");
-            await _plotterService.SendGCodeAsync($"G1 X{(ox + w):F3} Y{(oy + h):F3} F{feed:F0}");
-            await _plotterService.SendGCodeAsync($"G1 X{ox:F3} Y{(oy + h):F3} F{feed:F0}");
-            await _plotterService.SendGCodeAsync($"G1 X{ox:F3} Y{oy:F3} F{feed:F0}");
-            // Pen up
+            await _plotterService.SendGCodeAndAwaitOkAsync($"G1 X{(ox + w):F3} Y{oy:F3} F{feed:F0}");
+            await _plotterService.SendGCodeAndAwaitOkAsync($"G1 X{(ox + w):F3} Y{(oy + h):F3} F{feed:F0}");
+            await _plotterService.SendGCodeAndAwaitOkAsync($"G1 X{ox:F3} Y{(oy + h):F3} F{feed:F0}");
+            await _plotterService.SendGCodeAndAwaitOkAsync($"G1 X{ox:F3} Y{oy:F3} F{feed:F0}");
             await _plotterService.PenUpAsync();
             StatusMessage = "Perimeter trace complete.";
         }
