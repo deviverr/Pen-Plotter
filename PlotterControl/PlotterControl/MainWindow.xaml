@@ -1,0 +1,160 @@
+<Window x:Class="PlotterControl.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:PlotterControl"
+        xmlns:views="clr-namespace:PlotterControl.Views"
+        xmlns:viewmodels="clr-namespace:PlotterControl.ViewModels"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        Title="SimplePlotter Control" Height="700" Width="1100"
+        Icon="Resources/app_icon.ico"
+        Background="{DynamicResource MaterialDesign.Brush.Background}">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header / Connection Panel -->
+        <materialDesign:ColorZone Grid.Row="0" Mode="PrimaryDark" Padding="8,6" materialDesign:ElevationAssist.Elevation="Dp4">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- App Title -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
+                    <materialDesign:PackIcon Kind="Printer3d" Width="28" Height="28" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="SimplePlotter" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Connection Controls -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ComboBox ItemsSource="{Binding AvailablePorts}" SelectedItem="{Binding SelectedPort}" Width="90" Margin="0,0,4,0"
+                              materialDesign:HintAssist.Hint="COM" materialDesign:TextFieldAssist.HasClearButton="False">
+                        <ComboBox.Style>
+                            <Style TargetType="ComboBox" BasedOn="{StaticResource MaterialDesignFilledComboBox}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsConnected}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ComboBox.Style>
+                    </ComboBox>
+                    <Button Command="{Binding DiscoverPortsCommand}" ToolTip="Refresh Ports" Margin="0,0,4,0" Padding="4"
+                            Style="{StaticResource MaterialDesignIconForegroundButton}">
+                        <materialDesign:PackIcon Kind="Refresh"/>
+                    </Button>
+                    <Button Command="{Binding ConnectCommand}" Content="Connect" Margin="0,0,4,0"
+                            Style="{StaticResource MaterialDesignRaisedButton}"/>
+                    <Button Command="{Binding DisconnectCommand}" Content="Disconnect" Margin="0,0,8,0"
+                            Style="{StaticResource MaterialDesignOutlinedButton}"/>
+
+                    <materialDesign:PackIcon Kind="Circle" Width="12" Height="12" VerticalAlignment="Center" Margin="0,0,4,0"
+                                             Foreground="{Binding IsConnected, Converter={StaticResource BooleanToBrushConverter}}"/>
+                    <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" FontSize="12" MaxWidth="250" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+
+                <!-- Version Info (right-aligned) -->
+                <TextBlock Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right" FontSize="11" Opacity="0.6" Margin="8,0">
+                    <Run Text="v"/><Run Text="{Binding AppVersion, Mode=OneWay}"/>
+                    <Run Text=" | "/><Run Text="{Binding FirmwareInfo, Mode=OneWay}"/>
+                </TextBlock>
+
+                <!-- Log Toggle -->
+                <Button Grid.Column="3" Command="{Binding ToggleLogPanelCommand}" ToolTip="Toggle Serial Log"
+                        Style="{StaticResource MaterialDesignIconForegroundButton}" Padding="4">
+                    <materialDesign:PackIcon Kind="Console"/>
+                </Button>
+            </Grid>
+        </materialDesign:ColorZone>
+
+        <!-- Main Content with Styled Tabs -->
+        <TabControl Grid.Row="1" Margin="0"
+                    Style="{StaticResource MaterialDesignNavigationRailTabControl}">
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="GamepadVariant" Width="24" Height="24" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Control" HorizontalAlignment="Center" FontSize="10"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <views:ControlPanel DataContext="{Binding ControlPanelViewModel}"/>
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="Crosshairs" Width="24" Height="24" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Calibrate" HorizontalAlignment="Center" FontSize="10"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <views:CalibrationView DataContext="{Binding CalibrationViewModel}"/>
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="Pencil" Width="24" Height="24" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Editor" HorizontalAlignment="Center" FontSize="10"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <views:EditorView DataContext="{Binding EditorViewModel}"/>
+            </TabItem>
+            <TabItem>
+                <TabItem.Header>
+                    <StackPanel>
+                        <materialDesign:PackIcon Kind="Cog" Width="24" Height="24" HorizontalAlignment="Center"/>
+                        <TextBlock Text="Settings" HorizontalAlignment="Center" FontSize="10"/>
+                    </StackPanel>
+                </TabItem.Header>
+                <views:SettingsView DataContext="{Binding SettingsViewModel}"/>
+            </TabItem>
+        </TabControl>
+
+        <!-- Collapsible Serial Log Panel -->
+        <Border Grid.Row="2" BorderBrush="{DynamicResource MaterialDesign.Brush.ForegroundLight}" BorderThickness="0,1,0,0"
+                Visibility="{Binding IsLogPanelVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                MaxHeight="200">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0" Background="{DynamicResource MaterialDesign.Brush.Card.Background}">
+                    <TextBlock Text="Serial Log" FontWeight="Bold" VerticalAlignment="Center" Margin="8,4" DockPanel.Dock="Left"/>
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                        <Button Command="{Binding SaveLogCommand}" Content="Save as TXT" ToolTip="Download log as text file"
+                                Style="{StaticResource MaterialDesignFlatButton}" Margin="4,0" Padding="8,2"/>
+                        <Button Command="{Binding ClearLogCommand}" Content="Clear"
+                                Style="{StaticResource MaterialDesignFlatButton}" Margin="4,0" Padding="8,2"/>
+                    </StackPanel>
+                </DockPanel>
+
+                <ListBox Grid.Row="1" ItemsSource="{Binding LogMessages}" FontFamily="Consolas" FontSize="11"
+                         Background="{DynamicResource MaterialDesign.Brush.Background}" BorderThickness="0"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                         VirtualizingStackPanel.IsVirtualizing="True"
+                         SelectionMode="Extended">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="4,1"/>
+                            <Setter Property="FontFamily" Value="Consolas"/>
+                            <Setter Property="Focusable" Value="True"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </Grid>
+        </Border>
+        <!-- Notification Snackbar -->
+        <materialDesign:Snackbar Grid.Row="1" MessageQueue="{Binding NotificationQueue}"
+                                 VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+    </Grid>
+</Window>

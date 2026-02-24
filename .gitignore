@@ -1,0 +1,49 @@
+# Build outputs
+bin/
+obj/
+.pio/
+build/
+
+# IDE files with personal paths
+.vscode/c_cpp_properties.json
+.vscode/launch.json
+.vscode/ipch/
+.vscode/.browse.c_cpp.db*
+
+# Claude Code local settings
+.claude/settings.local.json
+*/.claude/settings.local.json
+
+# Backups
+PlotterControl_backup_*/
+
+# User-specific files
+*.user
+*.suo
+*.userprefs
+
+# Logs
+PlotterLog_*.txt
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# NuGet
+*.nupkg
+packages/
+
+# Plans and task files (development-only)
+.claude/plans/
+tasks/
+
+# Development prompt files
+final_prompt
+19_02_26
+prompt_*
+Work_Plan
+
+# CLAUDE.md with internal instructions
+CLAUDE.md
+*/CLAUDE.md

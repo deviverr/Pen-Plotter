@@ -1,0 +1,132 @@
+<UserControl x:Class="PlotterControl.Views.CalibrationView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Column: Calibration Workflow -->
+            <StackPanel Grid.Column="0">
+                <!-- Instructions -->
+                <materialDesign:Card Padding="16" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="Calibration Workflow" FontWeight="Bold" FontSize="16" Margin="0,0,0,4"/>
+                        <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12"
+                                   Text="1. Home the machine first&#x0a;2. Jog to bottom-left corner of paper, set Point 1&#x0a;3. Jog to top-right corner of paper, set Point 2&#x0a;4. Save calibration"/>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Workflow Buttons -->
+                <materialDesign:Card Padding="16" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="Calibrate" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <WrapPanel>
+                            <Button Command="{Binding StartCalibrationCommand}" Content="Start Calibration" Margin="0,0,8,8"
+                                    Style="{StaticResource MaterialDesignRaisedButton}"/>
+                            <Button Command="{Binding SetPoint1Command}" Content="Set Point 1 (BL)" Margin="0,0,8,8"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                            <Button Command="{Binding SetPoint2Command}" Content="Set Point 2 (TR)" Margin="0,0,8,8"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"/>
+                            <Button Command="{Binding SaveCalibrationCommand}" Content="Save" Margin="0,0,0,8"
+                                    Style="{StaticResource MaterialDesignRaisedButton}"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Calibration Points -->
+                <materialDesign:Card Padding="16" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="Calibration Points" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Point 1 (Origin)" FontSize="12" Opacity="0.7"/>
+                                <TextBlock Text="{Binding Point1, StringFormat='({0})'}" FontSize="14" FontFamily="Consolas"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Point 2 (Extent)" FontSize="12" Opacity="0.7"/>
+                                <TextBlock Text="{Binding Point2, StringFormat='({0})'}" FontSize="14" FontFamily="Consolas"/>
+                            </StackPanel>
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <TextBlock Text="{Binding CalibrationWidth, StringFormat='Width: {0:F1} mm'}" FontSize="14" FontFamily="Consolas" Margin="0,0,24,0"/>
+                            <TextBlock Text="{Binding CalibrationHeight, StringFormat='Height: {0:F1} mm'}" FontSize="14" FontFamily="Consolas"/>
+                        </StackPanel>
+                    </StackPanel>
+                </materialDesign:Card>
+
+                <!-- Status -->
+                <materialDesign:Card Padding="16">
+                    <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" FontStyle="Italic" Opacity="0.7"/>
+                </materialDesign:Card>
+            </StackPanel>
+
+            <!-- Right Column: Quick Navigation -->
+            <StackPanel Grid.Column="2">
+                <materialDesign:Card Padding="16" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="Quick Navigation" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <TextBlock Text="Move pen to calibrated area corners (pen up)." Opacity="0.7" FontSize="12" Margin="0,0,0,8"/>
+
+                        <!-- Corner button grid layout -->
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Top row: TL, _, TR -->
+                            <Button Grid.Row="0" Grid.Column="0" Command="{Binding GoToTopLeftCommand}"
+                                    Content="TL" Margin="2" Height="40"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    ToolTip="Move to top-left corner"/>
+                            <Button Grid.Row="0" Grid.Column="2" Command="{Binding GoToTopRightCommand}"
+                                    Content="TR" Margin="2" Height="40"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    ToolTip="Move to top-right corner"/>
+
+                            <!-- Middle row: _, Center, _ -->
+                            <Button Grid.Row="1" Grid.Column="1" Command="{Binding GoToCenterCommand}"
+                                    Content="Center" Margin="2" Height="40"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    ToolTip="Move to center of calibrated area"/>
+
+                            <!-- Bottom row: BL, _, BR -->
+                            <Button Grid.Row="2" Grid.Column="0" Command="{Binding GoToBottomLeftCommand}"
+                                    Content="BL" Margin="2" Height="40"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    ToolTip="Move to bottom-left corner (origin)"/>
+                            <Button Grid.Row="2" Grid.Column="2" Command="{Binding GoToBottomRightCommand}"
+                                    Content="BR" Margin="2" Height="40"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    ToolTip="Move to bottom-right corner"/>
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <Button Command="{Binding GoToOriginCommand}" Content="Go to 0,0" Margin="0,0,8,0"
+                                    Style="{StaticResource MaterialDesignFlatButton}"
+                                    ToolTip="Move to machine origin (0,0)"/>
+                            <Button Command="{Binding TracePerimeterCommand}" Content="Trace Perimeter"
+                                    Style="{StaticResource MaterialDesignRaisedButton}"
+                                    ToolTip="Draw a rectangle around the calibrated area to verify alignment"/>
+                        </StackPanel>
+                    </StackPanel>
+                </materialDesign:Card>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</UserControl>

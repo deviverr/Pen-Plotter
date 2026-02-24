@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"name": "SimplePlotter_Firmware",
+			"path": "."
+		}
+	],
+	"settings": {}
+}
