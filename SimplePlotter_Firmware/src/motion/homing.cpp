@@ -155,14 +155,14 @@ bool Homing::_singleAxisHomingSequence(char axis, long max_travel_steps, float f
     stepperControl.enableSteppers(); // Enable steppers for homing
 
     // Pre-check: if endstop is already triggered, back off to clear it first
-    if (endstops.isTriggered(axis)) {
+    if (endstops.getRawState(axis)) {
         serialHandler.sendInfo("Endstop pre-triggered, clearing...");
         if (!_moveAwayFromEndstop(axis, HOMING_BACKOFF_MM * 2, fast_feedrate_mm_s)) {
             stepperControl.disableSteppers();
             return false;
         }
-        delay(50); // Allow debounce to settle
-        if (endstops.isTriggered(axis)) {
+        delay(200); // Mechanical settle
+        if (endstops.getRawState(axis)) {
             serialHandler.sendError(ERR_HOMING_FAILED, "Cannot clear pre-triggered endstop");
             stepperControl.disableSteppers();
             return false;
@@ -175,30 +175,17 @@ bool Homing::_singleAxisHomingSequence(char axis, long max_travel_steps, float f
         stepperControl.disableSteppers();
         return false;
     }
+    delay(200); // Mechanical settle after endstop contact
 
-    // Phase 2: Backoff from endstop
+    // Phase 2: Backoff from endstop (no endstop validation — Marlin approach)
     serialHandler.sendInfo("Homing Phase 2: Backoff...");
     if (!_moveAwayFromEndstop(axis, HOMING_BACKOFF_MM, fast_feedrate_mm_s)) {
         stepperControl.disableSteppers();
         return false;
     }
-    
-    // Allow debounce to settle after backoff move completes
-    delay(50);
-    // Force multiple reads to flush stale debounce state
-    for (int i = 0; i < 5; i++) {
-        endstops.isTriggered(axis);
-        delay(10);
-    }
+    delay(200); // Mechanical settle before slow approach
 
-    // Post-backoff validation: Ensure endstop is no longer triggered
-    if (endstops.isTriggered(axis)) {
-        serialHandler.sendError(ERR_HOMING_FAILED, "Endstop still triggered after backoff");
-        stepperControl.disableSteppers();
-        return false;
-    }
-
-    // Phase 3: Slow approach towards endstop
+    // Phase 3: Slow approach towards endstop (precision positioning)
     serialHandler.sendInfo("Homing Phase 3: Slow approach...");
     // The maximum distance for the slow approach needs generous margin to account for any overshoot
     long slow_approach_max_steps = 0;
@@ -248,7 +235,7 @@ bool Homing::_moveUntilTriggered(char axis, float speed_mm_s, long max_distance_
 
     unsigned long start_time = millis();
     unsigned long last_ui_update = 0; // Track last LCD update for spinner animation
-    while (!endstops.isTriggered(axis)) {
+    while (!endstops.getRawState(axis)) {
         wdt_reset(); // Feed watchdog timer to prevent reset during long homing moves
 
         if (millis() - start_time > timeout_ms) {
@@ -319,7 +306,7 @@ bool Homing::_moveAwayFromEndstop(char axis, float distance_mm, float speed_mm_s
         speed_steps_per_s *= X_STEPS_PER_MM;
         new_target_pos_steps = current_pos_steps + move_distance_steps; // Move in positive direction (away from min endstop)
         stepperControl.setAxisMaxSpeed('X', speed_steps_per_s);
-        stepperControl.setAxisAcceleration('X', MAX_ACCEL_X * X_STEPS_PER_MM * HOMING_ACCEL_FACTOR);
+        stepperControl.setAxisAcceleration('X', MAX_ACCEL_X * X_STEPS_PER_MM);
         stepperControl.moveAxisTo('X', new_target_pos_steps);
     } else if (axis == 'Y') {
         current_pos_steps = stepperControl.getCurrentYSteps();
@@ -327,7 +314,7 @@ bool Homing::_moveAwayFromEndstop(char axis, float distance_mm, float speed_mm_s
         speed_steps_per_s *= Y_STEPS_PER_MM;
         new_target_pos_steps = current_pos_steps + move_distance_steps;
         stepperControl.setAxisMaxSpeed('Y', speed_steps_per_s);
-        stepperControl.setAxisAcceleration('Y', MAX_ACCEL_Y * Y_STEPS_PER_MM * HOMING_ACCEL_FACTOR);
+        stepperControl.setAxisAcceleration('Y', MAX_ACCEL_Y * Y_STEPS_PER_MM);
         stepperControl.moveAxisTo('Y', new_target_pos_steps);
     } else if (axis == 'Z') {
         current_pos_steps = stepperControl.getCurrentZSteps();
@@ -335,7 +322,7 @@ bool Homing::_moveAwayFromEndstop(char axis, float distance_mm, float speed_mm_s
         speed_steps_per_s *= Z_STEPS_PER_MM;
         new_target_pos_steps = current_pos_steps + move_distance_steps;
         stepperControl.setAxisMaxSpeed('Z', speed_steps_per_s);
-        stepperControl.setAxisAcceleration('Z', MAX_ACCEL_Z * Z_STEPS_PER_MM * HOMING_ACCEL_FACTOR);
+        stepperControl.setAxisAcceleration('Z', MAX_ACCEL_Z * Z_STEPS_PER_MM);
         stepperControl.moveAxisTo('Z', new_target_pos_steps);
     }
 
