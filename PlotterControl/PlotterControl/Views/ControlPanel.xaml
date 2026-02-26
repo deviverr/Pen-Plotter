@@ -93,8 +93,12 @@
                     <TextBlock Text="Step Size &amp; Pen" FontWeight="Bold" Margin="0,0,0,6"/>
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Step:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <ComboBox ItemsSource="{Binding JogSteps}" SelectedItem="{Binding JogStep}" Width="80" Margin="0,0,16,0"
+                        <ComboBox ItemsSource="{Binding JogSteps}" SelectedItem="{Binding JogStep}" Width="80" Margin="0,0,8,0"
                                   Style="{StaticResource MaterialDesignFilledComboBox}"/>
+                        <TextBox Text="{Binding CustomJogStepText, UpdateSourceTrigger=PropertyChanged}" Width="60" Margin="0,0,4,0"
+                                 Style="{StaticResource MaterialDesignFilledTextBox}"
+                                 materialDesign:HintAssist.Hint="Custom"/>
+                        <TextBlock Text="mm" VerticalAlignment="Center" Margin="0,0,12,0" Opacity="0.6"/>
                         <Button Command="{Binding PenUpCommand}" Content="Pen Up" Margin="0,0,5,0"
                                 Style="{StaticResource MaterialDesignOutlinedButton}"/>
                         <Button Command="{Binding PenDownCommand}" Content="Pen Down"

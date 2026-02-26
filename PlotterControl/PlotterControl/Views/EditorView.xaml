@@ -152,6 +152,12 @@
             <StackPanel Grid.Row="5" Orientation="Horizontal" Margin="0,0,0,8">
                 <Button Command="{Binding GenerateGCodeCommand}" Content="Generate G-Code" Margin="0,0,5,0"
                         Style="{StaticResource MaterialDesignRaisedButton}"/>
+                <Button Command="{Binding ExportGCodeCommand}" Content="Export" Margin="0,0,5,0"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        ToolTip="Save G-code to file"/>
+                <Button Command="{Binding ImportGCodeCommand}" Content="Import" Margin="0,0,5,0"
+                        Style="{StaticResource MaterialDesignOutlinedButton}"
+                        ToolTip="Load G-code from file"/>
                 <Button Command="{Binding PlotGCodeCommand}" Content="Plot" Margin="0,0,5,0"
                         Style="{StaticResource MaterialDesignRaisedButton}"
                         ToolTip="{Binding PlotButtonDisabledReason}"/>

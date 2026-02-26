@@ -1,13 +1,22 @@
 // PlotterControl/PlotterControl/ViewModels/SettingsVM.cs
 
 using MaterialDesignThemes.Wpf;
+using Microsoft.Win32;
 using PlotterControl.Models;
 using PlotterControl.Services;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace PlotterControl.ViewModels
 {
+    public class BedPreset
+    {
+        public string Name { get; set; }
+        public double XMax { get; set; }
+        public double YMax { get; set; }
+    }
+
     public class SettingsVM : BaseViewModel
     {
         private readonly ConfigManager _configManager;
@@ -40,12 +49,24 @@ namespace PlotterControl.ViewModels
                 DefaultTemplate = liveConfig.DefaultTemplate,
                 ShowGrid = liveConfig.ShowGrid,
                 AutoConnect = liveConfig.AutoConnect,
-                DarkTheme = liveConfig.DarkTheme
+                DarkTheme = liveConfig.DarkTheme,
+                PenTipSizeMM = liveConfig.PenTipSizeMM,
+                PenPressureMM = liveConfig.PenPressureMM
             };
 
             _isDarkTheme = liveConfig.DarkTheme;
 
+            // Bed presets
+            BedPresets = new List<BedPreset>
+            {
+                new BedPreset { Name = "Anet A8 Converted", XMax = 234, YMax = 191 },
+                new BedPreset { Name = "Ender 3", XMax = 235, YMax = 235 },
+                new BedPreset { Name = "Custom", XMax = 0, YMax = 0 }
+            };
+
             SaveSettingsCommand = new AsyncRelayCommand(SaveSettings, CanSaveSettings);
+            ExportConfigCommand = new AsyncRelayCommand(ExportConfig);
+            ImportConfigCommand = new AsyncRelayCommand(ImportConfig);
         }
 
         public PlotterConfig EditableConfig
@@ -75,6 +96,24 @@ namespace PlotterControl.ViewModels
             }
         }
 
+        // --- Bed presets ---
+        public List<BedPreset> BedPresets { get; }
+
+        private BedPreset _selectedBedPreset;
+        public BedPreset SelectedBedPreset
+        {
+            get => _selectedBedPreset;
+            set
+            {
+                if (SetProperty(ref _selectedBedPreset, value) && value != null && value.Name != "Custom")
+                {
+                    EditableConfig.XMaxMM = value.XMax;
+                    EditableConfig.YMaxMM = value.YMax;
+                    OnPropertyChanged(nameof(EditableConfig));
+                }
+            }
+        }
+
         public static void ApplyTheme(bool isDark)
         {
             var paletteHelper = new PaletteHelper();
@@ -84,6 +123,8 @@ namespace PlotterControl.ViewModels
         }
 
         public ICommand SaveSettingsCommand { get; }
+        public ICommand ExportConfigCommand { get; }
+        public ICommand ImportConfigCommand { get; }
 
         private bool CanSaveSettings() => true;
 
@@ -105,6 +146,8 @@ namespace PlotterControl.ViewModels
             _configManager.CurrentConfig.ShowGrid = EditableConfig.ShowGrid;
             _configManager.CurrentConfig.AutoConnect = EditableConfig.AutoConnect;
             _configManager.CurrentConfig.DarkTheme = EditableConfig.DarkTheme;
+            _configManager.CurrentConfig.PenTipSizeMM = EditableConfig.PenTipSizeMM;
+            _configManager.CurrentConfig.PenPressureMM = EditableConfig.PenPressureMM;
 
             _configManager.Save();
             StatusMessage = "Settings saved!";
@@ -113,6 +156,73 @@ namespace PlotterControl.ViewModels
             {
                 StatusMessage = "Baud rate changed. Please reconnect for changes to take effect.";
             }
+        }
+
+        private Task ExportConfig()
+        {
+            var dialog = new SaveFileDialog
+            {
+                Filter = "JSON files|*.json|All files|*.*",
+                DefaultExt = ".json",
+                Title = "Export Configuration"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                bool success = _configManager.ExportConfig(dialog.FileName);
+                StatusMessage = success ? $"Config exported to {dialog.FileName}" : "Export failed.";
+            }
+            return Task.CompletedTask;
+        }
+
+        private Task ImportConfig()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "JSON files|*.json|All files|*.*",
+                Title = "Import Configuration"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                bool success = _configManager.ImportConfig(dialog.FileName);
+                if (success)
+                {
+                    // Refresh editable config from imported values
+                    var liveConfig = _configManager.CurrentConfig;
+                    EditableConfig = new PlotterConfig
+                    {
+                        XMaxMM = liveConfig.XMaxMM,
+                        YMaxMM = liveConfig.YMaxMM,
+                        ZMaxMM = liveConfig.ZMaxMM,
+                        PenUpZ = liveConfig.PenUpZ,
+                        PenDownZ = liveConfig.PenDownZ,
+                        RapidFeedrate = liveConfig.RapidFeedrate,
+                        DrawFeedrate = liveConfig.DrawFeedrate,
+                        ZFeedrate = liveConfig.ZFeedrate,
+                        CalibrationOrigin = liveConfig.CalibrationOrigin,
+                        CalibrationWidth = liveConfig.CalibrationWidth,
+                        CalibrationHeight = liveConfig.CalibrationHeight,
+                        LastComPort = liveConfig.LastComPort,
+                        BaudRate = liveConfig.BaudRate,
+                        CommandTimeout = liveConfig.CommandTimeout,
+                        DefaultFont = liveConfig.DefaultFont,
+                        DefaultTemplate = liveConfig.DefaultTemplate,
+                        ShowGrid = liveConfig.ShowGrid,
+                        AutoConnect = liveConfig.AutoConnect,
+                        DarkTheme = liveConfig.DarkTheme,
+                        PenTipSizeMM = liveConfig.PenTipSizeMM,
+                        PenPressureMM = liveConfig.PenPressureMM
+                    };
+                    IsDarkTheme = liveConfig.DarkTheme;
+                    StatusMessage = "Config imported successfully!";
+                }
+                else
+                {
+                    StatusMessage = "Import failed. Check file format.";
+                }
+            }
+            return Task.CompletedTask;
         }
     }
 }

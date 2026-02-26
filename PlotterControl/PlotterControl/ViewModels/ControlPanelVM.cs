@@ -34,8 +34,8 @@ namespace PlotterControl.ViewModels
             SetSpeedOverrideCommand = new AsyncRelayCommand(SetSpeedOverride, CanJog);
 
             // Default jog step options
-            JogSteps = new List<double> { 0.1, 1, 10, 50 };
-            JogStep = JogSteps[1]; // Default to 1mm
+            JogSteps = new List<double> { 0.1, 0.5, 1, 5, 10, 25, 50, 100 };
+            JogStep = JogSteps[2]; // Default to 1mm
             _speedOverridePercent = 100;
         }
 
@@ -88,6 +88,23 @@ namespace PlotterControl.ViewModels
         }
 
         public List<double> JogSteps { get; } // Options for jog step size
+
+        private string _customJogStepText;
+        public string CustomJogStepText
+        {
+            get => _customJogStepText;
+            set
+            {
+                if (SetProperty(ref _customJogStepText, value))
+                {
+                    if (double.TryParse(value, System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out double parsed) && parsed > 0 && parsed <= 500)
+                    {
+                        JogStep = parsed;
+                    }
+                }
+            }
+        }
 
         private int _speedOverridePercent;
         public int SpeedOverridePercent

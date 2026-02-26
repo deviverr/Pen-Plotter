@@ -5,18 +5,22 @@ namespace PlotterControl.Models
     public class PlotterConfig
     {
         // Machine Dimensions & Calibration
-        public double XMaxMM { get; set; } = 220.0; // Max X travel in mm (Anet A8 standard bed size)
-        public double YMaxMM { get; set; } = 220.0; // Max Y travel in mm
-        public double ZMaxMM { get; set; } = 100.0; // Max Z travel in mm (for pen lift)
+        public double XMaxMM { get; set; } = 234.0; // Max X travel in mm (measured pen travel)
+        public double YMaxMM { get; set; } = 191.0; // Max Y travel in mm (measured bed travel)
+        public double ZMaxMM { get; set; } = 203.0; // Max Z travel in mm
 
         public PlotterPoint CalibrationOrigin { get; set; } = new PlotterPoint(0, 0); // User-defined (0,0) point
-        public double CalibrationWidth { get; set; } = 200.0; // User-defined printable width
-        public double CalibrationHeight { get; set; } = 200.0; // User-defined printable height
+        public double CalibrationWidth { get; set; } = 180.0; // User-defined printable width
+        public double CalibrationHeight { get; set; } = 180.0; // User-defined printable height
 
         // Pen/Z-Axis Settings (Z=0 is at endstop/paper level, Z+ moves up)
         public double PenUpZ { get; set; } = 3.0;    // Z-height for pen up (raised above paper)
         public double PenDownZ { get; set; } = 0.5;  // Z-height for pen down (paper contact)
         public double PenLiftHeight { get; set; } = 2.5; // Distance pen lifts above PenDownZ
+
+        // Pen Tip & Pressure Settings
+        public double PenTipSizeMM { get; set; } = 0.5;   // Pen tip diameter (0.3, 0.5, 0.7, 1.0 common)
+        public double PenPressureMM { get; set; } = 0.1;  // Base Z offset below PenDownZ (0.0=light, 0.5=heavy)
 
         // Movement Speeds (mm/min)
         public double RapidFeedrate { get; set; } = 5000.0; // G0/rapid movement

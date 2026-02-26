@@ -152,8 +152,12 @@
                         <TextBlock Text="Step Size &amp; Pen" FontWeight="Bold" Margin="0,0,0,6"/>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Step:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                            <ComboBox ItemsSource="{Binding JogSteps}" SelectedItem="{Binding JogStep}" Width="80" Margin="0,0,16,0"
+                            <ComboBox ItemsSource="{Binding JogSteps}" SelectedItem="{Binding JogStep}" Width="80" Margin="0,0,8,0"
                                       Style="{StaticResource MaterialDesignFilledComboBox}"/>
+                            <TextBox Text="{Binding CustomJogStepText, UpdateSourceTrigger=PropertyChanged}" Width="60" Margin="0,0,4,0"
+                                     Style="{StaticResource MaterialDesignFilledTextBox}"
+                                     materialDesign:HintAssist.Hint="Custom"/>
+                            <TextBlock Text="mm" VerticalAlignment="Center" Margin="0,0,12,0" Opacity="0.6"/>
                             <Button Command="{Binding PenUpCommand}" Content="Pen Up" Margin="0,0,5,0"
                                     Style="{StaticResource MaterialDesignOutlinedButton}"/>
                             <Button Command="{Binding PenDownCommand}" Content="Pen Down"
@@ -172,8 +176,13 @@
                             <TextBlock Text="{Binding DisplayPenDownZ, StringFormat='Down: {0:F2} mm'}" FontSize="14" FontFamily="Consolas" Margin="0,0,24,0"/>
                             <TextBlock Text="{Binding DisplayPenUpZ, StringFormat='Up: {0:F2} mm'}" FontSize="14" FontFamily="Consolas"/>
                         </StackPanel>
-                        <Button Command="{Binding SetPenDownPositionCommand}" Content="Set Pen Down Position"
-                                Style="{StaticResource MaterialDesignRaisedButton}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Command="{Binding SetPenDownPositionCommand}" Content="Set Pen Down Position" Margin="0,0,8,0"
+                                    Style="{StaticResource MaterialDesignRaisedButton}"/>
+                            <Button Command="{Binding TestLineCommand}" Content="Test Line"
+                                    Style="{StaticResource MaterialDesignOutlinedButton}"
+                                    ToolTip="Draw a 20mm test line at current pressure to preview pen contact"/>
+                        </StackPanel>
                     </StackPanel>
                 </materialDesign:Card>
 

@@ -82,7 +82,24 @@ namespace PlotterControl.ViewModels
             set => SetProperty(ref _jogStep, value);
         }
 
-        public List<double> JogSteps { get; } = new List<double> { 0.1, 1, 10, 50 };
+        public List<double> JogSteps { get; } = new List<double> { 0.1, 0.5, 1, 5, 10, 25, 50, 100 };
+
+        private string _customJogStepText;
+        public string CustomJogStepText
+        {
+            get => _customJogStepText;
+            set
+            {
+                if (SetProperty(ref _customJogStepText, value))
+                {
+                    if (double.TryParse(value, System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out double parsed) && parsed > 0 && parsed <= 500)
+                    {
+                        JogStep = parsed;
+                    }
+                }
+            }
+        }
 
         // --- Pen height calibration properties ---
         public double DisplayPenDownZ => _configManager.CurrentConfig.PenDownZ;
@@ -106,6 +123,7 @@ namespace PlotterControl.ViewModels
         public ICommand PenUpCommand { get; }
         public ICommand PenDownCommand { get; }
         public ICommand HomeAllCommand { get; }
+        public ICommand TestLineCommand { get; }
 
         // --- Commands: Corner navigation ---
         public ICommand GoToOriginCommand { get; }
@@ -156,6 +174,7 @@ namespace PlotterControl.ViewModels
             PenUpCommand = new AsyncRelayCommand(PenUp, CanJog);
             PenDownCommand = new AsyncRelayCommand(PenDown, CanJog);
             HomeAllCommand = new AsyncRelayCommand(HomeAllAxes, CanJog);
+            TestLineCommand = new AsyncRelayCommand(DrawTestLine, CanJog);
 
             // Corner navigation commands
             GoToOriginCommand = new AsyncRelayCommand(GoToOrigin, CanJog);
@@ -208,6 +227,7 @@ namespace PlotterControl.ViewModels
             ((AsyncRelayCommand)GoToCenterCommand).RaiseCanExecuteChanged();
             ((AsyncRelayCommand)TracePerimeterCommand).RaiseCanExecuteChanged();
             ((AsyncRelayCommand)SetPenDownPositionCommand).RaiseCanExecuteChanged();
+            ((AsyncRelayCommand)TestLineCommand).RaiseCanExecuteChanged();
         }
 
         // --- CanExecute predicates ---
@@ -404,6 +424,29 @@ namespace PlotterControl.ViewModels
             await _plotterService.SendGCodeAndAwaitOkAsync($"G1 X{ox:F3} Y{oy:F3} F{feed:F0}");
             await _plotterService.PenUpAsync();
             StatusMessage = "Perimeter trace complete.";
+        }
+
+        // --- Test line (draws 20mm line at current pressure to preview pen contact) ---
+
+        private async Task DrawTestLine()
+        {
+            if (!IsConnected || IsBusy) return;
+
+            var state = await _plotterService.GetMachineStateAsync();
+            if (state == null) return;
+
+            double startX = state.CurrentX;
+            double startY = state.CurrentY;
+            double penDownZ = Math.Max(_currentConfig.PenDownZ - _currentConfig.PenPressureMM, 0.0);
+            double feed = _currentConfig.DrawFeedrate;
+
+            StatusMessage = $"Drawing test line at Z={penDownZ:F2}mm (pressure={_currentConfig.PenPressureMM:F2}mm)...";
+            await _plotterService.SendGCodeAndAwaitOkAsync("G90");
+            await _plotterService.SendGCodeAndAwaitOkAsync($"G0 Z{penDownZ:F3} F{_currentConfig.ZFeedrate:F0}");
+            await _plotterService.SendGCodeAndAwaitOkAsync($"G1 X{(startX + 20):F3} Y{startY:F3} F{feed:F0}");
+            await _plotterService.PenUpAsync();
+            await _plotterService.SendGCodeAndAwaitOkAsync($"G0 X{startX:F3} Y{startY:F3} F{_currentConfig.RapidFeedrate:F0}");
+            StatusMessage = "Test line complete. Check line quality and adjust pressure if needed.";
         }
 
         // --- Validation ---

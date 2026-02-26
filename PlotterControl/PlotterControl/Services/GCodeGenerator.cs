@@ -125,13 +125,14 @@ namespace PlotterControl.Services
                 }
                 else // Drawing move
                 {
-                    // Compute pen-down Z for this stroke (with optional per-stroke pressure variation)
-                    double penDownZ = config.PenDownZ;
+                    // Compute pen-down Z: apply base pressure, then optional per-stroke variation
+                    // Base pressure pushes pen deeper into paper (lower Z = more pressure)
+                    double penDownZ = Math.Max(config.PenDownZ - config.PenPressureMM, 0.0);
                     if (humanize && humanSettings.PenPressureVariationMm > 0f && rng != null)
                     {
                         double variation = (rng.NextDouble() - 0.5) * 2.0 * humanSettings.PenPressureVariationMm;
-                        // Clamp so we never go above PenUpZ (which would lift the pen unintentionally)
-                        penDownZ = Math.Min(penDownZ + variation, config.PenUpZ - 0.05);
+                        // Clamp: never below 0 (endstop), never above PenUpZ (would lift pen)
+                        penDownZ = Math.Clamp(penDownZ + variation, 0.0, config.PenUpZ - 0.05);
                     }
 
                     // Lower pen if needed

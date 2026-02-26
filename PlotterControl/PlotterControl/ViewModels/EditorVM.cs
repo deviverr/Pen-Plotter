@@ -87,7 +87,7 @@ namespace PlotterControl.ViewModels
 
             // Image mode defaults
             _imageThreshold = 128;
-            _imageLineSpacing = 1.0;
+            _imageLineSpacing = _currentConfig.PenTipSizeMM;
             _useDithering = false;
 
             Task.Run(LoadFonts);
@@ -102,6 +102,8 @@ namespace PlotterControl.ViewModels
             StopPlotCommand = new AsyncRelayCommand(StopPlot, CanStopPlot);
             LoadImageCommand = new AsyncRelayCommand(LoadImage);
             ProcessImageCommand = new AsyncRelayCommand(ProcessImage);
+            ExportGCodeCommand = new AsyncRelayCommand(ExportGCode);
+            ImportGCodeCommand = new AsyncRelayCommand(ImportGCode);
         }
 
         private void OnMachineStateChanged(MachineState newState)
@@ -363,7 +365,7 @@ namespace PlotterControl.ViewModels
         public string GeneratedGCode
         {
             get => _generatedGCode;
-            private set => SetProperty(ref _generatedGCode, value);
+            set => SetProperty(ref _generatedGCode, value);
         }
 
         private string _estimatedPlotInfo;
@@ -408,6 +410,8 @@ namespace PlotterControl.ViewModels
         public ICommand StopPlotCommand { get; }
         public ICommand LoadImageCommand { get; }
         public ICommand ProcessImageCommand { get; }
+        public ICommand ExportGCodeCommand { get; }
+        public ICommand ImportGCodeCommand { get; }
 
         // --- Text rendering ---
         private async Task RenderText()
@@ -499,6 +503,54 @@ namespace PlotterControl.ViewModels
 
             Debug.WriteLine($"Processed image into {RenderedPaths?.Count ?? 0} paths.");
             await GenerateGCode();
+        }
+
+        // --- G-Code export/import ---
+        private Task ExportGCode()
+        {
+            if (string.IsNullOrEmpty(GeneratedGCode)) return Task.CompletedTask;
+
+            var dialog = new SaveFileDialog
+            {
+                Filter = "G-Code files|*.gcode;*.gc;*.nc|All files|*.*",
+                DefaultExt = ".gcode",
+                Title = "Export G-Code"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                System.IO.File.WriteAllText(dialog.FileName, GeneratedGCode);
+                Logger.Info($"G-code exported to {dialog.FileName}");
+            }
+            return Task.CompletedTask;
+        }
+
+        private Task ImportGCode()
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "G-Code files|*.gcode;*.gc;*.nc|All files|*.*",
+                Title = "Import G-Code"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                GeneratedGCode = System.IO.File.ReadAllText(dialog.FileName);
+                Logger.Info($"G-code imported from {dialog.FileName}");
+
+                // Estimate plot time
+                var (estTime, totalLines, totalDist) = _gcodeGenerator.EstimatePlotTime(GeneratedGCode);
+                string timeStr = estTime.TotalHours >= 1
+                    ? $"{(int)estTime.TotalHours}h {estTime.Minutes:D2}m"
+                    : estTime.TotalMinutes >= 1
+                        ? $"{(int)estTime.TotalMinutes}m {estTime.Seconds:D2}s"
+                        : $"{estTime.Seconds}s";
+                EstimatedPlotInfo = $"Imported | Est. time: {timeStr} | {totalLines} moves | {totalDist:F0} mm";
+
+                OnPropertyChanged(nameof(PlotButtonDisabledReason));
+                ((AsyncRelayCommand)PlotGCodeCommand).RaiseCanExecuteChanged();
+            }
+            return Task.CompletedTask;
         }
 
         // --- G-Code generation ---

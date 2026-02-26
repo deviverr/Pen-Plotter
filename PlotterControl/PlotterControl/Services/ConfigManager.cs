@@ -58,5 +58,44 @@ namespace PlotterControl.Services
                 Logger.Error($"Error saving configuration: {ex.Message}", ex);
             }
         }
+
+        public bool ExportConfig(string filePath)
+        {
+            try
+            {
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                string jsonString = JsonSerializer.Serialize(CurrentConfig, options);
+                File.WriteAllText(filePath, jsonString);
+                Logger.Info($"Configuration exported to {filePath}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error exporting configuration: {ex.Message}", ex);
+                return false;
+            }
+        }
+
+        public bool ImportConfig(string filePath)
+        {
+            try
+            {
+                string jsonString = File.ReadAllText(filePath);
+                var imported = JsonSerializer.Deserialize<PlotterConfig>(jsonString);
+                if (imported != null)
+                {
+                    CurrentConfig = imported;
+                    Save();
+                    Logger.Info($"Configuration imported from {filePath}");
+                    return true;
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error importing configuration: {ex.Message}", ex);
+                return false;
+            }
+        }
     }
 }
