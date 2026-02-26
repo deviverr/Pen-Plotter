@@ -9,9 +9,9 @@
 //                               VERSION INFO
 //===========================================================================
 #define FIRMWARE_VERSION_MAJOR  1
-#define FIRMWARE_VERSION_MINOR  2
+#define FIRMWARE_VERSION_MINOR  3
 #define FIRMWARE_VERSION_PATCH  0
-#define FIRMWARE_VERSION_STRING "1.2.0"
+#define FIRMWARE_VERSION_STRING "1.3.0"
 #define BOARD_TYPE              "MKS_Gen_v1.4"
 
 //===========================================================================
@@ -58,23 +58,25 @@
 //                            MACHINE DIMENSIONS & STEPS
 //===========================================================================
 
-// Assumed Anet A8-style dimensions for initial setup (in mm)
-#define X_MAX_POS       220.0  // Maximum X travel
-#define Y_MAX_POS       220.0  // Maximum Y travel
-#define Z_MAX_POS       100.0  // Maximum Z travel (for pen lift mechanism)
+// Machine dimensions measured from physical plotter (in mm)
+#define X_MAX_POS       234.0  // Measured pen travel: home (right) to far wall (left)
+#define Y_MAX_POS       191.0  // Measured bed travel: home (front) to far wall (back)
+#define Z_MAX_POS       203.0  // Measured Z travel (only 0-5mm used for pen)
 
 // Steps per mm calculation
-// For GT2 belt (2mm pitch), 20-tooth pulley, 1/16 microstepping:
-// Steps per revolution = 200 (full steps) * 16 (microstepping) = 3200
+// DRV8825 drivers at 1/32 microstepping, GT2 belt, 20-tooth pulley:
+// Steps per revolution = 200 (full steps) * 32 (microstepping) = 6400
 // Pulley circumference = 20 teeth * 2mm = 40mm
-// Steps per mm = 3200 / 40 = 80 steps/mm
-#define X_STEPS_PER_MM  80.0
-#define Y_STEPS_PER_MM  80.0
+// Steps per mm = 6400 / 40 = 160 steps/mm
+// Verified: 50mm command moved 24.5mm at 80 steps/mm → 4000/24.5 ≈ 163 ≈ 160
+#define X_STEPS_PER_MM  160.0
+#define Y_STEPS_PER_MM  160.0
 
-// For Z-axis Leadscrew (e.g., T8 leadscrew: 8mm pitch, 1/16 microstepping)
+// For Z-axis Leadscrew (T8 leadscrew: 8mm pitch, 1/16 microstepping)
 // Steps per revolution = 200 (full steps) * 16 (microstepping) = 3200
 // Leadscrew pitch = 8mm/rev
 // Steps per mm = 3200 / 8 = 400 steps/mm
+// TODO: If Z uses DRV8825 at 1/32, this should be 800 — verify physically
 #define Z_STEPS_PER_MM  400.0
 
 //===========================================================================
@@ -122,9 +124,15 @@
 #define ENDSTOP_Y_MIN_INVERTING     true   // Mechanical button, active-LOW
 #define ENDSTOP_Z_MIN_INVERTING     false  // Optical sensor, HIGH=triggered
 
-// Motor direction inversion (set true if motor moves the wrong way during homing)
-// Test Z first: Home Z, watch which way it moves, flip INVERT_Z_DIR if wrong direction
-#define INVERT_Z_DIR                false  // Flip to true ONLY if Z moves the wrong way during homing
+// Motor direction inversion (set true if motor moves the wrong way)
+#define INVERT_X_DIR                true   // X+ = physical right (pen homes to right)
+#define INVERT_Y_DIR                false  // Y direction is correct
+#define INVERT_Z_DIR                false  // Z direction is correct
+
+// Homing direction per axis: -1 = home to min endstop, 1 = home to max endstop
+#define HOME_DIR_X                  1      // X endstop is at right (max) side
+#define HOME_DIR_Y                  (-1)   // Y endstop is at front (min) side
+#define HOME_DIR_Z                  (-1)   // Z endstop is at bottom (min) side
 
 // Enable internal pullup resistors for endstop pins (recommended)
 #define ENDSTOP_X_MIN_PULLUP        true

@@ -247,9 +247,12 @@ void loop() {
                     // Endstop-safe jogging: in relative mode, check endstops for axes moving toward home
                     char endstop_triggered = '\0';
                     if (!absolute_mode) {
-                        _jog_check_x = cmd.move.has_x && cmd.move.x_val < -0.001f;
-                        _jog_check_y = cmd.move.has_y && cmd.move.y_val < -0.001f;
-                        _jog_check_z = cmd.move.has_z && cmd.move.z_val < -0.001f;
+                        // Check if jog is moving TOWARD the home endstop for each axis
+                        // HOME_DIR_X=1 means endstop is at max, so positive jog = toward endstop
+                        // HOME_DIR_Y=-1 means endstop is at min, so negative jog = toward endstop
+                        _jog_check_x = cmd.move.has_x && ((HOME_DIR_X < 0) ? (cmd.move.x_val < -0.001f) : (cmd.move.x_val > 0.001f));
+                        _jog_check_y = cmd.move.has_y && ((HOME_DIR_Y < 0) ? (cmd.move.y_val < -0.001f) : (cmd.move.y_val > 0.001f));
+                        _jog_check_z = cmd.move.has_z && ((HOME_DIR_Z < 0) ? (cmd.move.z_val < -0.001f) : (cmd.move.z_val > 0.001f));
 
                         if (_jog_check_x || _jog_check_y || _jog_check_z) {
                             bool stopped = stepperControl.runBlockingWithCheck(jogEndstopCheck);
@@ -285,8 +288,8 @@ void loop() {
                         snprintf(msg, sizeof(msg), "Endstop hit on %c during jog, auto-homing", endstop_triggered);
                         serialHandler.sendInfo(msg);
                         homing.homeAxis(endstop_triggered);
-                        if (endstop_triggered == 'X') current_position_mm.x = 0.0;
-                        else if (endstop_triggered == 'Y') current_position_mm.y = 0.0;
+                        if (endstop_triggered == 'X') current_position_mm.x = (HOME_DIR_X == 1) ? X_MAX_POS : 0.0f;
+                        else if (endstop_triggered == 'Y') current_position_mm.y = (HOME_DIR_Y == 1) ? Y_MAX_POS : 0.0f;
                         else if (endstop_triggered == 'Z') current_position_mm.z = PEN_UP_Z;
                         stepperControl.setCurrentPosition(
                             kinematics.mmToStepsX(current_position_mm.x),
@@ -315,8 +318,11 @@ void loop() {
                         homing_success = x_success && y_success && z_success;
                     }
                     // Update position based on which axes actually homed
-                    if (homing.isHomedX()) current_position_mm.x = 0.0;
-                    if (homing.isHomedY()) current_position_mm.y = 0.0;
+                    // X homes to max (right side), so position = X_MAX_POS
+                    // Y homes to min (front), so position = 0
+                    // Z homes to min, then moves to Z_HOME_POSITION
+                    if (homing.isHomedX()) current_position_mm.x = (HOME_DIR_X == 1) ? X_MAX_POS : 0.0f;
+                    if (homing.isHomedY()) current_position_mm.y = (HOME_DIR_Y == 1) ? Y_MAX_POS : 0.0f;
                     if (homing.isHomedZ()) current_position_mm.z = Z_HOME_POSITION;
                     // Sync stepper positions with current_position_mm
                     stepperControl.setCurrentPosition(

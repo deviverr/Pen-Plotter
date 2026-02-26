@@ -19,14 +19,11 @@ void StepperControl::init() {
     _stepperY.setEnablePin(Y_ENABLE_PIN);
     _stepperZ.setEnablePin(Z_ENABLE_PIN);
 
-    // Invert enable logic if needed (HIGH to disable for many drivers)
-    // Most drivers are active LOW enable, meaning HIGH disables.
-    // AccelStepper defaults to active LOW, so setting enable pin HIGH disables.
-    // Set to true if ENABLE pin is active HIGH (LOW disables)
-    // INVERT_Z_DIR allows flipping Z motor direction without rewiring
-    // (set in config.h, default false - change to true if Z moves the wrong way during homing)
-    _stepperX.setPinsInverted(false, false, true); // Dir, Step, Enable
-    _stepperY.setPinsInverted(false, false, true);
+    // setPinsInverted(directionInvert, stepInvert, enableInvert)
+    // Enable is active-LOW on MKS Gen v1.4 (HIGH disables), so enableInvert=true
+    // Direction inversion configured in config.h per axis
+    _stepperX.setPinsInverted(INVERT_X_DIR, false, true);
+    _stepperY.setPinsInverted(INVERT_Y_DIR, false, true);
     _stepperZ.setPinsInverted(INVERT_Z_DIR, false, true);
 
     // Set initial maximum speeds and accelerations from config

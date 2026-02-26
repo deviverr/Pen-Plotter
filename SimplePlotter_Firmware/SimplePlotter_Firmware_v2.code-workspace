@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../PlotterControl"
+		},
+		{
+			"path": ".."
 		}
 	],
 	"settings": {}

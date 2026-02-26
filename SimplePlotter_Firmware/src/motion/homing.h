@@ -30,14 +30,22 @@ private:
     bool _is_homed_y;
     bool _is_homed_z;
 
+    // Get homing direction for axis: -1 (toward min) or 1 (toward max)
+    int _getHomeDir(char axis);
+
+    // Get maximum position for axis in mm
+    float _getMaxPos(char axis);
+
     // Internal helper for homing a single axis
     bool _singleAxisHomingSequence(char axis, long max_travel_steps, float fast_feedrate_mm_s, float slow_feedrate_mm_s);
 
     // Helper to move towards endstop until triggered or timeout
-    bool _moveUntilTriggered(char axis, float speed_mm_s, long max_distance_steps, unsigned long timeout_ms);
+    // direction: -1 or 1, controlling which way the axis moves
+    bool _moveUntilTriggered(char axis, float speed_mm_s, long max_distance_steps, unsigned long timeout_ms, int direction);
 
     // Helper to move away from endstop for a specified distance
-    bool _moveAwayFromEndstop(char axis, float distance_mm, float speed_mm_s);
+    // direction: -1 or 1, controlling which way to back off
+    bool _moveAwayFromEndstop(char axis, float distance_mm, float speed_mm_s, int direction);
 };
 
 extern Homing homing; // Global instance
